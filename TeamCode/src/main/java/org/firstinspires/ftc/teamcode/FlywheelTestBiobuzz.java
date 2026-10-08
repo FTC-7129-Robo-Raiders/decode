@@ -47,21 +47,25 @@ public class FlywheelTestBiobuzz extends LinearOpMode {
      * and actual flywheel telemetry for observability's sake
      * ===============
      * Controls:
-     * a button: Reset flywheel to the baseline velocity
+     * right bumper: Reset flywheel to the baseline velocity; use this to turn on flywheel from a stop
      * b button: Stop the flywheel
      * dpad up: Increase the speed of the flywheel
      * dpad down: Decrease the speed of the flywheel
      */
     private void processGamepadInputForFlywheel() {
         double currentFlywheelVelocity = flywheel.getVelocity();
-        if (gamepad1.a) {
+        if (gamepad1.right_bumper) {
+            // Baseline at -1500 ticks; a negative baseline is used based on the direction
+            // we want the flywheel to spin
             desiredFlywheelVelocity = -1500;
         } else if (gamepad1.b) {
             desiredFlywheelVelocity = 0;
         } else if (gamepad1.dpad_up) {
-            desiredFlywheelVelocity = currentFlywheelVelocity - 100;
+            // Note: Negative velocities actually are spinning the flywheel faster
+            desiredFlywheelVelocity -= 100;
         } else if (gamepad1.dpad_down) {
-            desiredFlywheelVelocity = currentFlywheelVelocity + 100;
+            // Note: Negative velocities actually are spinning the flywheel slower
+            desiredFlywheelVelocity += 100;
         }
         flywheel.setVelocity(desiredFlywheelVelocity);
 
