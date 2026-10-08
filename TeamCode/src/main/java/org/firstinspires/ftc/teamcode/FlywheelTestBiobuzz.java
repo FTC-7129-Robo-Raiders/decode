@@ -53,7 +53,6 @@ public class FlywheelTestBiobuzz extends LinearOpMode {
      * dpad down: Decrease the speed of the flywheel
      */
     private void processGamepadInputForFlywheel() {
-        double currentFlywheelVelocity = flywheel.getVelocity();
         if (gamepad1.right_bumper) {
             // Baseline at -1500 ticks; a negative baseline is used based on the direction
             // we want the flywheel to spin
