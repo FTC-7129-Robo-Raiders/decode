@@ -5,6 +5,9 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
+import java.time.Duration;
+import java.time.Instant;
+
 @TeleOp(name = "Biobuzz Flywheel Test")
 public class FlywheelTestBiobuzz extends LinearOpMode {
     private DcMotorEx flywheel;
@@ -13,6 +16,10 @@ public class FlywheelTestBiobuzz extends LinearOpMode {
     // Track the desired velocity of the flywheel; this allows incrementing/decrementing
     // the velocity and also measuring the difference between actual and desired velocity
     private double desiredFlywheelVelocity;
+    // Used to avoid incrementing/decrementing too quickly when multiple up/down keypresses
+    // are read within a loop
+    private Instant lastVelocityChange;
+    private final Duration debounceTime = Duration.ofMillis(500);
 
     /**
      * Initialize our subsystems; this should be called once at robot startup
@@ -42,6 +49,28 @@ public class FlywheelTestBiobuzz extends LinearOpMode {
     }
 
     /**
+     * Check if we're outside the debounce window for flywheel increment/decrement
+     * operations. This method exists to avoid reading a single up/down button press
+     * as multiple events; reading one button press multiple times causes too much
+     * increase/decrease in velocity
+     *
+     * @return True if a flywheel change is allowed, false otherwise
+     */
+    private boolean flywheelChangeAllowed() {
+        return lastVelocityChange == null ||
+            Duration.between(lastVelocityChange, Instant.now()).compareTo(debounceTime) >= 0;
+    }
+
+    /** Adjust the desired velocity from its current amount by the specified amount.
+     * This is useful to increment or decrement the velocity relative to its current position
+     * @param amount The amount to increment or decrement the velocity
+     */
+    private void adjustDesiredVelocity(double amount) {
+        desiredFlywheelVelocity += amount;
+        lastVelocityChange = Instant.now();
+    }
+
+    /**
      * Process gamepad input for the flywheel subsystem. This method takes in gamepad input
      * and adjusts the flywheel subsystem accordingly. It also records desired
      * and actual flywheel telemetry for observability's sake
@@ -59,18 +88,21 @@ public class FlywheelTestBiobuzz extends LinearOpMode {
             desiredFlywheelVelocity = -1500;
         } else if (gamepad1.b) {
             desiredFlywheelVelocity = 0;
-        } else if (gamepad1.dpad_up) {
-            // Note: Negative velocities actually are spinning the flywheel faster
-            desiredFlywheelVelocity -= 100;
-        } else if (gamepad1.dpad_down) {
-            // Note: Negative velocities actually are spinning the flywheel slower
-            desiredFlywheelVelocity += 100;
+        } else if (gamepad1.dpad_up && flywheelChangeAllowed()) {
+            // Note: Negative velocities actually are spinning the flywheel faster since we
+            // start at a negative baseline
+            adjustDesiredVelocity(-50);
+        } else if (gamepad1.dpad_down && flywheelChangeAllowed()) {
+            // Note: Positive velocities actually are spinning the flywheel slower since we
+            // start at a negative baseline
+            adjustDesiredVelocity(50);
         }
         flywheel.setVelocity(desiredFlywheelVelocity);
 
         // Record telemetry for the current Flywheel velocity and the desired velocity
         telemetry.addData("flywheelVelocity", flywheel.getVelocity());
         telemetry.addData("desiredFlywheelVelocity", desiredFlywheelVelocity);
+        telemetry.update();
     }
 
     @Override
